@@ -1,10 +1,10 @@
 [
     {
         "caption": "Palantir: Refresh Kite / Ontology",
-        "command": "palantir_refresh_settings"
+        "command": "palantir_kite_refresh_settings"
     },
     {
         "caption": "Palantir: Save settings",
-        "command": "palantir_save_settings"
+        "command": "palantir_kite_save_settings"
     }
 ]

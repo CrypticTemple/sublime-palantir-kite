@@ -329,6 +329,7 @@ class Ontology(object):
               startupinfo=sinfo)
         return popen.communicate()
 
+<<<<<<< HEAD
 class PalantirRefreshSettings(sublime_plugin.ApplicationCommand):
     def run(self):
         kite.reset()
@@ -341,6 +342,20 @@ class PalantirSaveSettings(sublime_plugin.ApplicationCommand):
         kite.store(settings)
         ontology.store(settings)
 
+=======
+class PalantirKiteRefreshSettings(sublime_plugin.ApplicationCommand):
+	def run(self):
+		kite.reset()
+		kite.parse()
+		ontology.reset()
+		ontology.parse()
+
+class PalantirKiteSaveSettings(sublime_plugin.ApplicationCommand):
+	def run(self):
+		kite.store(settings)
+		ontology.store(settings)
+		
+>>>>>>> Renamed a few things before the initial commit - just lining things back up
 class PalantirKiteListener(sublime_plugin.EventListener):
     def check_kite(self, view):
         '''see if we're using the kite namespace as default'''
@@ -495,10 +510,10 @@ class PalantirKiteListener(sublime_plugin.EventListener):
             self.check_position(view)
         return False
 
-settings = sublime.load_settings('palantir.sublime-settings')
+settings = sublime.load_settings('Kite.sublime-settings')
 home = settings.get('home', find_home(None))
 kite = Kite(home, settings.get('jars'), settings.get('jdk'))
 ontology = Ontology(home, settings.get('ontology'))
 kite.load(settings)
 ontology.load(settings)
-# sublime.save_settings('palantir.sublime-settings')
+# sublime.save_settings('Kite.sublime-settings')
