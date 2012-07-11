@@ -1,0 +1,19 @@
+{
+	// palantir home
+	// default unix: /opt/palantir/dispatchServer
+	// default windows: C:\Palantir\<biggest version>
+	"home": null,
+	
+	// path to ontology repository for completions
+	// if a file, it'll use the file
+	// if a path, it'll use the most recently created file
+	"ontology": null,
+
+	// jdk home - default / null: use one on path
+	"jdk": null,
+
+	// additional jar files where kite extension classes are stored
+	"jars": [
+
+	]
+}

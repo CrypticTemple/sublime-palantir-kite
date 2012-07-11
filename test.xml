@@ -1,0 +1,199 @@
+<?xml version="1.0" ?>
+<kite xmlns="http://www.palantirtech.com/pg/schema/kite/">
+  <config>
+    <updateInterval>10000</updateInterval>
+    <batchSize>1000</batchSize>
+    <batchSleepTime>0</batchSleepTime>
+    <connection>
+      <driverName>net.sourceforge.jtds.jdbc.Driver</driverName>
+      <url>jdbc:jtds:sqlserver://carmendb:1433/THIEVES</url>
+      <username>carmensandiego</username>
+      <plaintextPassword>thepassword</plaintextPassword>
+    </connection>
+    <repository>
+      <path>
+        <directory>/tmp/kite/carmen</directory>
+        <levels>0</levels>
+      </path>
+    </repository>
+  </config>
+  <tables>
+    <table>
+      <description>Criminal</description>
+      <rowproviderSet>
+        <rowprovider>
+          <param key="sql">SELECT * FROM CRIMINAL</param>
+        </rowprovider>
+        <rowprovider class="com.palantir.kite.processor.chained.VariableSubstitutionRowProvider">
+          <param key="generatedColumn">aka</param>
+          <param key="pattern">Also known as: ${CRIMINAL_ALIAS}</param>
+        </rowprovider>
+      </rowproviderSet>
+      <globalParams>
+        <param key="primaryKeyColumns">criminal_id</param>
+        <param key="documentName">CRIMINAL</param>
+        <param key="objectName">CRIMINAL</param>
+        <param key="objectType">com.palantir.object.person</param>
+      </globalParams>
+      <rowprocessorSet>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyRawProcessor">
+          <param key="propertyValueColumn">full_name</param>
+          <param key="propertyName">CRIMINAL_NAME</param>
+          <param key="propertyType">com.palantir.property.Name</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyRawProcessor">
+          <param key="propertyValueColumn">alias</param>
+          <param key="propertyName">CRIMINAL_ALIAS</param>
+          <param key="propertyType">com.palantir.property.aka</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.TimestampPropertyProcessor">
+          <param key="propertyName">CRIMINAL_BIRTHDATE</param>
+          <param key="dateColumn">birth_date</param>
+          <param key="propertyType">com.palantir.property.DateOfBirth</param>
+          <param key="useRawProperty">true</param>
+        </rowprocessor>
+      </rowprocessorSet>
+    </table>
+    <table>
+      <description>Criminal Characteristics</description>
+      <rowproviderSet>
+        <rowprovider>
+          <param key="sql">SELECT * FROM CRIMINAL_CHARACTERISTIC</param>
+        </rowprovider>
+      </rowproviderSet>
+      <globalParams>
+        <param key="documentName">CRIMINAL_CHARACTERISTIC</param>
+        <param key="primaryKeyColumns">characteristic_id</param>
+        <param key="objectName">CRIMINAL_CHARACTERISTIC</param>
+        <param key="foreignObjectName">CRIMINAL</param>
+        <param key="foreignKeyColumns">criminal_id</param>
+        <param key="objectType">com.palantir.object.person</param>
+      </globalParams>
+      <rowprocessorSet>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyRawProcessor">
+          <param key="propertyTypeDiscriminatorColumn">type</param>
+          <param key="propertyValueColumn">description</param>
+          <param key="propertyName">CRIMINAL_PROPERTY</param>
+          <param key="propertyTypeMapKeys">HAIR COLOR,EYE COLOR,GENDER,ETHNICITY</param>
+          <param key="propertyTypeMapValues">
+            com.palantir.property.HairColor,
+            com.palantir.property.EyeColor,
+            com.palantir.property.Gender,
+            com.palantir.property.Ethnicity</param>
+        </rowprocessor>
+      </rowprocessorSet>
+    </table>
+    <table>
+      <description>Cities</description>
+      <rowproviderSet>
+        <rowprovider>
+          <param key="sql">SELECT * FROM CITY</param>
+        </rowprovider>
+      </rowproviderSet>
+      <rowprocessorSet>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyRawProcessor">
+          <param key="primaryKeyColumns">city_id</param>
+          <param key="documentName">CITY</param>
+          <param key="objectName">CITY</param>
+          <param key="objectType">com.palantir.object.Location</param>
+          <param key="propertyValueColumn">name</param>
+          <param key="propertyName">CITY_NAME</param>
+          <param key="propertyType">com.palantir.property.Location</param>
+        </rowprocessor>
+      </rowprocessorSet>
+    </table>
+    <table>
+      <description>Events</description>
+      <rowproviderSet>
+        <rowprovider>
+          <param key="sql">SELECT * FROM EVENT</param>
+        </rowprovider>
+      </rowproviderSet>
+      <globalParams>
+        <param key="primaryKeyColumns">event_id</param>
+        <param key="documentName">EVENT</param>
+        <param key="documentIdColumns">event_id</param>
+        <param key="objectName">EVENT</param>
+        <param key="objectType">com.palantir.object.Event</param>
+      </globalParams>
+      <rowprocessorSet>
+        <rowprocessor class="com.palantir.kite.processor.importresync.TimeIntervalPropertyProcessor">
+          <param key="propertyName">EVENT_TIME_INTERVAL</param>
+          <param key="beginDateColumn">visit_begins_ts</param>
+          <param key="endDateColumn">visit_ends_ts</param>
+          <param key="propertyType">com.palantir.property.TimeInterval</param>
+          <param key="propertyLinkType">com.palantir.link.TimeInterval</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.StubObjectProcessor">
+          <param key="objectName">CITY</param>
+          <param key="primaryKeyColumns">city_id</param>
+          <param key="objectType">com.palantir.object.abstract</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.ParentChildLinkProcessor">
+          <param key="linkName">EVENT_TO_CITY</param>
+          <param key="linkType">com.palantir.link.Simple</param>
+          <param key="childObjectName">EVENT</param>
+          <param key="childKeyColumns">event_id</param>
+          <param key="parentObjectName">CITY</param>
+          <param key="parentKeyColumns">city_id</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.StubObjectProcessor">
+          <param key="objectType">com.palantir.object.abstract</param>
+          <param key="objectName">CRIMINAL</param>
+          <param key="primaryKeyColumns">criminal_id</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.ParentChildLinkProcessor">
+          <param key="linkName">EVENT_TO_CRIMINAL</param>
+          <param key="linkType">com.palantir.link.Simple</param>
+          <param key="childObjectName">EVENT</param>
+          <param key="childKeyColumns">event_id</param>
+          <param key="parentObjectName">CRIMINAL</param>
+          <param key="parentKeyColumns">criminal_id</param>
+        </rowprocessor>
+      </rowprocessorSet>
+    </table>
+    <table>
+      <description>Stolen Property</description>
+      <rowproviderSet>
+        <rowprovider>
+          <param key="sql">SELECT * FROM STOLEN_PROPERTY</param>
+        </rowprovider>
+      </rowproviderSet>
+      <globalParams>
+        <param key="primaryKeyColumns">property_id</param>
+        <param key="documentName">PROPERTY</param>
+        <param key="documentIdColumns">property_id</param>
+        <param key="objectName">PROPERTY</param>
+        <param key="objectType">com.palantir.object.HighValueItem</param>
+      </globalParams>
+      <rowprocessorSet>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyRawProcessor">
+          <param key="propertyValueColumn">description</param>
+          <param key="propertyName">PROPERTY_NAME</param>
+          <param key="propertyType">com.palantir.property.ItemName</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.PropertyComponentProcessor">
+          <param key="propertyName">PROPERTY_VALUE</param>
+          <param key="propertyType">com.palantir.property.MonetaryValue</param>
+          <param key="componentTypes">CURRENCY_AMOUNT</param>
+          <param key="componentColumns">value</param>
+          <param key="fixedComponentTypes">CURRENCY_CODE</param>
+          <param key="fixedComponentValues">usd</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.StubObjectProcessor">
+          <param key="objectType">com.palantir.object.abstract</param>
+          <param key="objectName">EVENT</param>
+          <param key="primaryKeyColumns">event_id</param>
+        </rowprocessor>
+        <rowprocessor class="com.palantir.kite.processor.importresync.ParentChildLinkProcessor">
+          <param key="linkName">PROPERTY_TO_EVENT</param>
+          <param key="linkType">com.palantir.link.Simple</param>
+          <param key="childObjectName">PROPERTY</param>
+          <param key="childKeyColumns">property_id</param>
+          <param key="parentObjectName">EVENT</param>
+          <param key="parentKeyColumns">event_id</param>
+        </rowprocessor>
+      </rowprocessorSet>
+    </table>
+  </tables>
+</kite>

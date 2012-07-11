@@ -1,0 +1,8 @@
+{
+        // "scope": "text.xml.kite meta.tag.block.rowprocessor.xml,meta.tag.block.rowprovider.xml,meta.tag.block.global-params.xml punctuation.definition.tag.begin",
+        "scope": "text.xml.kite",
+        "completions":
+        [
+                { "trigger": "<param", "contents": "param key=\"$1\">$2</param>" }
+        ]
+}
