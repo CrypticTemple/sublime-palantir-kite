@@ -26,6 +26,8 @@ HOMES = {
     None: '/opt/palantir/dispatchServer'
 }
 
+SETTINGS_FILE = 'Kite.sublime-settings'
+
 def get_text(view):
     return view.substr(sublime.Region(0, view.size()))
 
@@ -59,12 +61,32 @@ def find_home(setting):
     if setting is not None and os.path.isdir(setting):
         return setting
     elif os.name == 'nt' and os.path.isdir(HOMES['nt']):
-        p = most_recent(HOMES['nt'], '[0-9].*', lambda t,f: os.path.isdir(f))
+        p = most_recent(HOMES['nt'], '[0-9].*', lambda (t,f): os.path.isdir(f))
         # settings.set('home',p)
         return p
     elif os.path.isdir(HOMES[None]):
         # settings.set('home',HOMES[None])
         return HOMES[None]
+    return None
+
+def find_workspace_cache():
+    # find the home directory
+    home = None
+    if 'HOME' in os.environ:
+        home = os.environ['HOME']
+    elif 'USERPROFILE' in os.environ:
+        home = os.environ['USERPROFILE']
+    if not home or not os.path.isdir(home):
+        return None
+    # find the cache
+    cache = os.path.join(home,'.palantir','cache')
+    if not os.path.isdir(cache):
+        return None
+    # most recent workspace directory in cache 
+    latest = most_recent(cache,'[0-9a-fA-F]*', lambda (t,f): os.path.isdir(f))
+    bootstrap = os.path.join(latest, 'bootstrap')
+    if os.path.exists(bootstrap):
+        return bootstrap
     return None
 
 def in_scope(view, location, scope):
@@ -112,10 +134,9 @@ class Kite(object):
         self.jdk = jdk
         self.processors = defaultdict(set)
         self.providers = defaultdict(set)
-        if self.home is not None:
-            kjar = self.find_kite_jar()
-            if kjar not in self.jars:
-                self.jars.push(kjar)
+        kjar = self.find_kite_jar()
+        if kjar and kjar not in self.jars:
+            self.jars.append(kjar)
         self.reset()
 
     def reset(self):
@@ -135,26 +156,33 @@ class Kite(object):
                 d[key] = set(value)
 
     def store(self, settings):
+        convert = lambda p: dict([(k if k else "", list(v)) for k, v in p.iteritems()])
         settings.set('kite', {
-            'providers': self.providers,
-            'processors': self.processors
+            'providers': convert(self.providers),
+            'processors': convert(self.processors)
         })
 
     def find_kite_jar(self):
-        return most_recent(os.path.join(home,'lib','server'),'[Kk]ite*.jar')
+        path = None
+        if self.home and os.path.isdir(self.home):
+            path = os.path.join(self.home,'lib','server')
+        else:
+            cache = find_workspace_cache()
+            path = cache if cache else None
+        if not path:
+            return None
+        return most_recent(path,'[Kk]ite*.jar')
 
     def extend(self, d, jar, klass):
-        abstract, params = self.parse_javap(jar, p)
-        k = p
-        if abstract:
-            k = None
-        d[k] = d[k].union(set(params))
+        abstract, params = self.parse_javap(jar, klass)
+        key = klass if not abstract else None
+        d[key] = d[key].union(set(params))
 
     def get_global_params(self):
         return set().union(*self.processors.values())
 
     def parse(self):
-        if self.home is None:
+        if not self.jars:
             return
         self.reset()
         for jar in self.jars:
@@ -201,7 +229,7 @@ class Kite(object):
         ret = set()
         abstract = False
 
-        out, err = self.exec_javap(jar)
+        out, err = self.exec_javap(jar, klass)
         if err:
             print err
             return (abstract, ret)
@@ -213,13 +241,15 @@ class Kite(object):
 
         for line in f:
             line = line.strip()
+            if line.startswith('Compiled from'):
+                continue
             if first:
                 first = False
                 if 'abstract ' in line or 'interface ' in line:
                     abstract = True
                 continue
-            idx = line.index(signature)
-            par = line.index(first_type, idx)
+            idx = line.find(signature)
+            par = line.find(first_type, idx)
             if -1 in (idx, par):
                 continue
             ret.add(uncapitalize(line[idx + len(signature):par]))
@@ -240,16 +270,19 @@ class Kite(object):
             executable = os.path.join(self.jdk,'bin/' + executable)
 
         cmd = [ executable ] + opts
-          popen = subprocess.Popen(cmd,
+        if shell:
+            cmd = ' '.join(cmd)
+        print cmd
+        popen = subprocess.Popen(cmd,
               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
               shell=shell, startupinfo=sinfo)
         return popen.communicate()
 
     def exec_jar(self, jar):
-        return self._exec('jar',[ 'tf', jar ])
+        return self._exec('jar', ['tf', jar])
 
     def exec_javap(self, jar, klass):
-        return self._exec('javap',[ '-classpath', jar, klass ])
+        return self._exec('javap', ['-public','-classpath', jar, klass])
 
 class Ontology(object):
     '''storage bin for ontology URIs'''
@@ -324,38 +357,24 @@ class Ontology(object):
             executable = os.path.join(self.home,'bin/unix/ontologyMerge.sh')
         # do we need a temporary file here? or a named pipe of some kind?
         cmd = [ executable, '--file', self.file, '--list', '-' ]
-          popen = subprocess.Popen(cmd,
+        popen = subprocess.Popen(cmd,
               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
               startupinfo=sinfo)
         return popen.communicate()
 
-<<<<<<< HEAD
-class PalantirRefreshSettings(sublime_plugin.ApplicationCommand):
+class PalantirKiteRefreshSettings(sublime_plugin.ApplicationCommand):
     def run(self):
         kite.reset()
         kite.parse()
         ontology.reset()
         ontology.parse()
 
-class PalantirSaveSettings(sublime_plugin.ApplicationCommand):
+class PalantirKiteSaveSettings(sublime_plugin.ApplicationCommand):
     def run(self):
         kite.store(settings)
         ontology.store(settings)
-
-=======
-class PalantirKiteRefreshSettings(sublime_plugin.ApplicationCommand):
-	def run(self):
-		kite.reset()
-		kite.parse()
-		ontology.reset()
-		ontology.parse()
-
-class PalantirKiteSaveSettings(sublime_plugin.ApplicationCommand):
-	def run(self):
-		kite.store(settings)
-		ontology.store(settings)
-		
->>>>>>> Renamed a few things before the initial commit - just lining things back up
+        sublime.save_settings(SETTINGS_FILE)
+        
 class PalantirKiteListener(sublime_plugin.EventListener):
     def check_kite(self, view):
         '''see if we're using the kite namespace as default'''
@@ -459,7 +478,6 @@ class PalantirKiteListener(sublime_plugin.EventListener):
         self.flags = 0
         return ontology.get_all()
 
-
     def on_query_completions(self, view, prefix, locations):
         # I'm not dealing with multiple cursors
         if not self.is_kite(view) or len(locations) <= 0:
@@ -510,7 +528,7 @@ class PalantirKiteListener(sublime_plugin.EventListener):
             self.check_position(view)
         return False
 
-settings = sublime.load_settings('Kite.sublime-settings')
+settings = sublime.load_settings(SETTINGS_FILE)
 home = settings.get('home', find_home(None))
 kite = Kite(home, settings.get('jars'), settings.get('jdk'))
 ontology = Ontology(home, settings.get('ontology'))
